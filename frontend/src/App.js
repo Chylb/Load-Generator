@@ -1,0 +1,111 @@
+import { useState, useEffect } from 'react';
+import { Container, Form, Button } from "react-bootstrap";
+import { useSortableData } from './useSortableData';
+import { CONCURRENT_USERS_PER_INSTANCE, API_PATH } from './constants';
+import './App.css';
+
+import 'bootstrap/dist/css/bootstrap.min.css';
+
+function App() {
+  const [results, setResults] = useState([]);
+  const [sortedResults, requestSort, sortConfig] = useSortableData(results, { key: 'key', direction: 'descending' });
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      fetchResults();
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, []);
+
+  const fetchResults = async () => {
+    fetch(API_PATH)
+      .then(response => response.json())
+      .then(results => setResults(results));
+  }
+
+  const handleSubmit = async (event) => {
+    event.preventDefault();
+    const request = {
+      url: event.target.url.value,
+      concurrentUsers: event.target.concurrentUsers.value,
+      loopCount: event.target.loopCount.value
+    }
+
+    fetch(API_PATH, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(request)
+    })
+  }
+
+  const renderResults = (results) => {
+    return results.map((result) => {
+      return (
+        <tr key={result.key} className={result.state == 'unfinished' ? "table-warning" : ""}>
+          <td>{new Date(1 * result.key).toLocaleString()}</td>
+          <td>{result.url}</td>
+          <td>{result.concurrentUsers}</td>
+          <td>{(result.averageResponseTime / 1000000).toFixed(2)}</td>
+          <td>{(result.maxResponseTime / 1000000).toFixed(2)}</td>
+          <td>{result.state}</td>
+        </tr >
+      )
+    })
+  }
+
+  return (
+    <>
+      <Container className="py-4">
+        <div style={{ textAlign: 'center' }}>
+          <h1>Load Generator</h1>
+        </div>
+      </Container>
+
+      <Container>
+        <Form onSubmit={handleSubmit}>
+          <Form.Group controlId="url" className="mb-3">
+            <Form.Label>Url</Form.Label>
+            <Form.Control type="url" defaultValue="http://localhost:1111" required={true} />
+          </Form.Group>
+
+          <Form.Group controlId="concurrentUsers" className="mb-3">
+            <Form.Label>Concurrent users</Form.Label>
+            <Form.Control type="number" defaultValue={CONCURRENT_USERS_PER_INSTANCE} step={CONCURRENT_USERS_PER_INSTANCE} min={CONCURRENT_USERS_PER_INSTANCE} required={true} />
+          </Form.Group>
+
+          <Form.Group controlId="loopCount" className="mb-3">
+            <Form.Label>Loop count</Form.Label>
+            <Form.Control type="number" defaultValue="10" min={1} required={true} />
+          </Form.Group>
+
+          <Button variant="primary" type="submit">
+            Generate load
+          </Button>
+        </Form>
+      </Container>
+
+      <Container className="py-5">
+        <table className="table table-striped">
+          <thead>
+            <tr>
+              <th scope="col" onClick={() => requestSort('key')}>Date</th>
+              <th scope="col" onClick={() => requestSort('url')}>Url</th>
+              <th scope="col" onClick={() => requestSort('concurrentUsers')}>Concurrent users</th>
+              <th scope="col" onClick={() => requestSort('averageResponseTime')}>Average response time</th>
+              <th scope="col" onClick={() => requestSort('maxResponseTime')}>Max response time</th>
+              <th scope="col" onClick={() => requestSort('state')}>State</th>
+            </tr>
+          </thead>
+          <tbody>
+            {renderResults(sortedResults)}
+          </tbody>
+        </table>
+      </Container>
+    </>
+  );
+}
+
+export default App;

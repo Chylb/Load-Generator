@@ -1,0 +1,16 @@
+package com.ociet.loadgenerator.master.dto;
+
+import lombok.AllArgsConstructor;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
+
+@AllArgsConstructor
+@NoArgsConstructor
+@Setter
+@Getter
+public class LoadRequest {
+    private String url;
+    private int concurrentUsers;
+    private int loopCount;
+}
