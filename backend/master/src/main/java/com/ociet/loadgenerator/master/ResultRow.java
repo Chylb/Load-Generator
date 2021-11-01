@@ -8,7 +8,6 @@ import lombok.*;
 @AllArgsConstructor
 @NoArgsConstructor
 public class ResultRow {
-    public String url;
     public long responseTimeSum;
     public long maxResponseTime;
     public int receivedParts;

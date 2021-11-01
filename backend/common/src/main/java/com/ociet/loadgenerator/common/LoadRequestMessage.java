@@ -8,6 +8,6 @@ import lombok.*;
 @AllArgsConstructor
 @NoArgsConstructor
 public class LoadRequestMessage {
-    private String url;
+    private int requestOffset;
     private int loopCount;
 }

@@ -7,14 +7,12 @@ dependencies {
     implementation 'com.fasterxml.jackson.core:jackson-core:2.12.5'
     implementation 'com.fasterxml.jackson.core:jackson-databind:2.12.5'
     implementation 'com.google.guava:guava:31.0.1-jre'
-    //implementation 'org.slf4j:slf4j-api:1.7.30'
     implementation 'org.slf4j:slf4j-api:2.0.0-alpha5'
     implementation 'org.slf4j:slf4j-simple:2.0.0-alpha5'
-    //implementation 'org.slf4j:slf4j-simple:1.7.30'
-//    implementation 'org.apache.logging.log4j:log4j-slf4j-impl:2.14.1'
+    compileOnly 'org.projectlombok:lombok:1.18.20'
+    annotationProcessor 'org.projectlombok:lombok:1.18.20'
     testImplementation 'org.junit.jupiter:junit-jupiter-api:5.7.0'
     testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.7.0'
-    //testImplementation 'org.apache.logging.log4j:log4j-slf4j-impl:2.14.1'
 }
 
 test {

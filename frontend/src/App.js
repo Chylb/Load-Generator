@@ -27,7 +27,6 @@ function App() {
   const handleSubmit = async (event) => {
     event.preventDefault();
     const request = {
-      url: event.target.url.value,
       concurrentUsers: event.target.concurrentUsers.value,
       loopCount: event.target.loopCount.value
     }
@@ -46,7 +45,6 @@ function App() {
       return (
         <tr key={result.key} className={result.state == 'unfinished' ? "table-warning" : ""}>
           <td>{new Date(1 * result.key).toLocaleString()}</td>
-          <td>{result.url}</td>
           <td>{result.concurrentUsers}</td>
           <td>{(result.averageResponseTime / 1000000).toFixed(2)}</td>
           <td>{(result.maxResponseTime / 1000000).toFixed(2)}</td>
@@ -66,11 +64,6 @@ function App() {
 
       <Container>
         <Form onSubmit={handleSubmit}>
-          <Form.Group controlId="url" className="mb-3">
-            <Form.Label>Url</Form.Label>
-            <Form.Control type="url" defaultValue="http://localhost:1111" required={true} />
-          </Form.Group>
-
           <Form.Group controlId="concurrentUsers" className="mb-3">
             <Form.Label>Concurrent users</Form.Label>
             <Form.Control type="number" defaultValue={CONCURRENT_USERS_PER_INSTANCE} step={CONCURRENT_USERS_PER_INSTANCE} min={CONCURRENT_USERS_PER_INSTANCE} required={true} />
@@ -92,7 +85,6 @@ function App() {
           <thead>
             <tr>
               <th scope="col" onClick={() => requestSort('key')}>Date</th>
-              <th scope="col" onClick={() => requestSort('url')}>Url</th>
               <th scope="col" onClick={() => requestSort('concurrentUsers')}>Concurrent users</th>
               <th scope="col" onClick={() => requestSort('averageResponseTime')}>Average response time</th>
               <th scope="col" onClick={() => requestSort('maxResponseTime')}>Max response time</th>

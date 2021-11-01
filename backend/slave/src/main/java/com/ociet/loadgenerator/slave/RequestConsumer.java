@@ -6,6 +6,8 @@ import com.google.common.io.Resources;
 import com.ociet.loadgenerator.common.Constants;
 import com.ociet.loadgenerator.common.LoadRequestMessage;
 import com.ociet.loadgenerator.common.LoadResultMessage;
+import lombok.Getter;
+import lombok.Setter;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.clients.consumer.ConsumerRecords;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
@@ -14,6 +16,9 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
 import java.time.Duration;
 import java.util.List;
 import java.util.Properties;
@@ -21,6 +26,7 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.function.Function;
 
 public class RequestConsumer {
     private static final Logger logger = LoggerFactory.getLogger(SlaveApplication.class);
@@ -39,7 +45,7 @@ public class RequestConsumer {
         this.producer = producer;
     }
 
-    public void run() throws JsonProcessingException, InterruptedException {
+    public void run(Function<HttpRequestGeneratorArguments, HttpRequest> requestGenerator) throws JsonProcessingException, InterruptedException {
         while (true) {
             ConsumerRecords<String, String> records = consumer.poll(Duration.ofSeconds(1));
             for (ConsumerRecord<String, String> record : records) {
@@ -53,18 +59,28 @@ public class RequestConsumer {
                 AtomicLong maxResponseTime = new AtomicLong();
 
                 for (int i = 0; i < Constants.CONCURRENT_USERS_PER_SLAVE; i++) {
+
+                    var requestGeneratorArguments = new HttpRequestGeneratorArguments();
+                    requestGeneratorArguments.setUserOffset(message.getRequestOffset() * Constants.CONCURRENT_USERS_PER_SLAVE + i);
+
                     executor.execute(() -> {
+                        HttpClient client = HttpClient.newHttpClient();
+
                         long userResponseTimeSum = 0;
                         long userMaxResponseTime = 0;
                         for (int j = 0; j < message.getLoopCount(); j++) {
                             try {
+                                var httpRequest = requestGenerator.apply(requestGeneratorArguments);
+
                                 long start = System.nanoTime();
-                                HttpRequester.makeRequest(message.getUrl());
+                                var response = client.send(httpRequest, HttpResponse.BodyHandlers.ofString());
                                 long responseTime = System.nanoTime() - start;
 
                                 userResponseTimeSum += responseTime;
                                 userMaxResponseTime = Math.max(userMaxResponseTime, responseTime);
 
+                                requestGeneratorArguments.setLoopIteration(j);
+                                requestGeneratorArguments.setPreviousResponse(response);
                             } catch (Exception e) {
                                 e.printStackTrace();
                             }
@@ -87,5 +103,13 @@ public class RequestConsumer {
                 producer.send(resultMessage);
             }
         }
+    }
+
+    @Getter
+    @Setter
+    public static class HttpRequestGeneratorArguments {
+        private int userOffset;
+        private int loopIteration;
+        HttpResponse previousResponse;
     }
 }

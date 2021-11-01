@@ -30,7 +30,6 @@ public class ResultService {
             ResultRow v = e.getValue();
             return new LoadResult(
                     e.getKey(),
-                    v.getUrl(),
                     v.getTotalParts() * Constants.CONCURRENT_USERS_PER_SLAVE,
                     v.getResponseTimeSum() / Constants.CONCURRENT_USERS_PER_SLAVE / v.getLoopCount() / v.getTotalParts(),
                     v.getMaxResponseTime(),

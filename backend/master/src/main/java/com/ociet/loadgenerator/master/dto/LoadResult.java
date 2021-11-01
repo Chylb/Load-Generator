@@ -9,7 +9,6 @@ import lombok.Setter;
 @Getter
 public class LoadResult {
     private final String key;
-    private final String url;
     private final long concurrentUsers;
     private final long averageResponseTime;
     private final long maxResponseTime;

@@ -10,7 +10,6 @@ import lombok.Setter;
 @Setter
 @Getter
 public class LoadRequest {
-    private String url;
     private int concurrentUsers;
     private int loopCount;
 }
