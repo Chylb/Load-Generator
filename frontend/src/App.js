@@ -43,7 +43,7 @@ function App() {
   const renderResults = (results) => {
     return results.map((result) => {
       return (
-        <tr key={result.key} className={result.state == 'unfinished' ? "table-warning" : ""}>
+        <tr key={result.key} className={result.state == 'running' ? "table-warning" : ""}>
           <td>{new Date(1 * result.key).toLocaleString()}</td>
           <td>{result.concurrentUsers}</td>
           <td>{(result.averageResponseTime / 1000000).toFixed(2)}</td>

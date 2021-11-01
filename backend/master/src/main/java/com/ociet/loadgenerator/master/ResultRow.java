@@ -13,4 +13,5 @@ public class ResultRow {
     public int receivedParts;
     public int totalParts;
     public int loopCount;
+    public boolean failed;
 }

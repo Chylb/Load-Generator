@@ -25,11 +25,14 @@ import java.util.Properties;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Function;
 
 public class RequestConsumer {
     private static final Logger logger = LoggerFactory.getLogger(SlaveApplication.class);
+    private static final long MAX_CONSUME_TIME_DELAY = 1000;
+
     private final ObjectMapper mapper = new ObjectMapper();
     ThreadPoolExecutor executor = (ThreadPoolExecutor) Executors.newFixedThreadPool(Constants.CONCURRENT_USERS_PER_SLAVE);
     private final ResultProducer producer;
@@ -57,48 +60,53 @@ public class RequestConsumer {
                 long startTimestamp = System.currentTimeMillis();
                 AtomicLong responseTimeSum = new AtomicLong();
                 AtomicLong maxResponseTime = new AtomicLong();
+                AtomicBoolean failed = new AtomicBoolean(Math.abs(record.timestamp() - startTimestamp) > MAX_CONSUME_TIME_DELAY);
 
-                for (int i = 0; i < Constants.CONCURRENT_USERS_PER_SLAVE; i++) {
+                if (!failed.get()) {
+                    for (int i = 0; i < Constants.CONCURRENT_USERS_PER_SLAVE; i++) {
+                        var requestGeneratorArguments = new HttpRequestGeneratorArguments();
+                        requestGeneratorArguments.setUserOffset(message.getRequestOffset() * Constants.CONCURRENT_USERS_PER_SLAVE + i);
 
-                    var requestGeneratorArguments = new HttpRequestGeneratorArguments();
-                    requestGeneratorArguments.setUserOffset(message.getRequestOffset() * Constants.CONCURRENT_USERS_PER_SLAVE + i);
+                        executor.execute(() -> {
+                            HttpClient client = HttpClient.newHttpClient();
 
-                    executor.execute(() -> {
-                        HttpClient client = HttpClient.newHttpClient();
+                            long userResponseTimeSum = 0;
+                            long userMaxResponseTime = 0;
 
-                        long userResponseTimeSum = 0;
-                        long userMaxResponseTime = 0;
-                        for (int j = 0; j < message.getLoopCount(); j++) {
                             try {
-                                var httpRequest = requestGenerator.apply(requestGeneratorArguments);
+                                for (int j = 0; j < message.getLoopCount(); j++) {
+                                    var httpRequest = requestGenerator.apply(requestGeneratorArguments);
 
-                                long start = System.nanoTime();
-                                var response = client.send(httpRequest, HttpResponse.BodyHandlers.ofString());
-                                long responseTime = System.nanoTime() - start;
+                                    long start = System.nanoTime();
+                                    var response = client.send(httpRequest, HttpResponse.BodyHandlers.ofString());
+                                    long responseTime = System.nanoTime() - start;
 
-                                userResponseTimeSum += responseTime;
-                                userMaxResponseTime = Math.max(userMaxResponseTime, responseTime);
+                                    userResponseTimeSum += responseTime;
+                                    userMaxResponseTime = Math.max(userMaxResponseTime, responseTime);
 
-                                requestGeneratorArguments.setLoopIteration(j);
-                                requestGeneratorArguments.setPreviousResponse(response);
+                                    requestGeneratorArguments.setLoopIteration(j);
+                                    requestGeneratorArguments.setPreviousResponse(response);
+                                }
                             } catch (Exception e) {
-                                e.printStackTrace();
+                                logger.error(e.getMessage());
+                                failed.set(true);
                             }
-                        }
-                        responseTimeSum.addAndGet(userResponseTimeSum);
-                        long finalUserMaxResponseTime = userMaxResponseTime;
-                        maxResponseTime.updateAndGet(x -> Math.max(x, finalUserMaxResponseTime));
+                            responseTimeSum.addAndGet(userResponseTimeSum);
+                            long finalUserMaxResponseTime = userMaxResponseTime;
+                            maxResponseTime.updateAndGet(x -> Math.max(x, finalUserMaxResponseTime));
 
-                        latch.countDown();
-                    });
+                            latch.countDown();
+                        });
+                    }
+                    latch.await();
                 }
-                latch.await();
 
                 LoadResultMessage resultMessage = new LoadResultMessage(
                         record.key(),
                         responseTimeSum.get(),
                         maxResponseTime.get(),
-                        startTimestamp
+                        startTimestamp,
+                        failed.get()
                 );
                 producer.send(resultMessage);
             }

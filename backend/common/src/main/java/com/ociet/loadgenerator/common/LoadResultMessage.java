@@ -12,4 +12,5 @@ public class LoadResultMessage {
     private long responseTimeSum;
     private long maxResponseTime;
     private long startTimestamp;
+    private boolean failed;
 }

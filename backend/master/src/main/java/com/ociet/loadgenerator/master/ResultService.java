@@ -18,6 +18,7 @@ public class ResultService {
         resultRow.responseTimeSum += message.getResponseTimeSum();
         resultRow.setMaxResponseTime(Math.max(resultRow.maxResponseTime, message.getMaxResponseTime()));
         resultRow.setReceivedParts(resultRow.getReceivedParts() + 1);
+        resultRow.setFailed(resultRow.isFailed() || message.isFailed());
         resultMap.put(message.getRequestKey(), resultRow);
     }
 
@@ -28,12 +29,16 @@ public class ResultService {
     public Collection<LoadResult> getResults() {
         return resultMap.entrySet().stream().map(e -> {
             ResultRow v = e.getValue();
+
+            String state = v.getReceivedParts() == v.getTotalParts() ? "success" : "running";
+            if (v.isFailed()) state = "failed";
+
             return new LoadResult(
                     e.getKey(),
                     v.getTotalParts() * Constants.CONCURRENT_USERS_PER_SLAVE,
                     v.getResponseTimeSum() / Constants.CONCURRENT_USERS_PER_SLAVE / v.getLoopCount() / v.getTotalParts(),
                     v.getMaxResponseTime(),
-                    v.getReceivedParts() == v.getTotalParts() ? "finished" : "unfinished");
+                    state);
         }).collect(Collectors.toList());
     }
 }
