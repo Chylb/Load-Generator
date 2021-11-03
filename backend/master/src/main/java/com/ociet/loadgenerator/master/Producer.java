@@ -15,8 +15,8 @@ public class Producer {
     @Autowired
     private KafkaTemplate<String, LoadRequestMessage> kafkaTemplate;
 
-    public void sendMessage(String key, LoadRequestMessage message) {
+    public void sendMessage(String key, int partition, LoadRequestMessage message) {
         logger.info(String.format("Producing message -> %s", message));
-        this.kafkaTemplate.send(Constants.LOAD_REQUEST_TOPIC, key, message);
+        this.kafkaTemplate.send(Constants.LOAD_REQUEST_TOPIC, partition, key, message);
     }
 }

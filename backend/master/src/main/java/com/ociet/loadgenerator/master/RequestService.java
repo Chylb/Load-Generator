@@ -8,6 +8,8 @@ import org.springframework.stereotype.Service;
 
 @Service
 public class RequestService {
+    private static final int PARTITION_COUNT = 100;
+
     private final Producer producer;
     private final ResultService resultService;
 
@@ -31,7 +33,10 @@ public class RequestService {
 
         for(int i = 0; i < concurrentInstances; i++) {
             loadRequestMessage.setRequestOffset(i);
-            this.producer.sendMessage(key, loadRequestMessage);
+            int partition = Math.round((i / (float) concurrentInstances) * PARTITION_COUNT) + 1;
+            partition = Math.min(partition, PARTITION_COUNT - 1);
+
+            this.producer.sendMessage(key, partition, loadRequestMessage);
         }
     }
 }
