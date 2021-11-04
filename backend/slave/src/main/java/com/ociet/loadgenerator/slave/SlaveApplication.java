@@ -18,7 +18,7 @@ public class SlaveApplication {
 
         consumer.run((args) -> {
             return HttpRequest.newBuilder(
-                            URI.create("http://localhost:1111/" + args.getUserOffset())
+                            URI.create("http://localhost:1111/players/" + (args.getUserOffset() % 18278))
                     )
                     .build();
         });

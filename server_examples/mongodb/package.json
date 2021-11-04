@@ -1,0 +1,19 @@
+{
+  "dependencies": {
+    "buffer": "^6.0.3",
+    "chalk": "^4.1.2",
+    "express": "^4.17.1",
+    "http": "^0.0.1-security",
+    "mongodb": "^4.1.3"
+  },
+  "scripts": {
+    "start": "node index.js"
+  },
+  "type": "module",
+  "name": "mongodb service",
+  "version": "1.0.0",
+  "main": "index.js",
+  "author": "",
+  "license": "ISC",
+  "description": ""
+}
