@@ -1,5 +1,8 @@
 package com.ociet.loadgenerator.master;
 
+import com.netflix.discovery.shared.Application;
+import com.netflix.discovery.shared.Applications;
+import com.netflix.eureka.EurekaServerContextHolder;
 import com.ociet.loadgenerator.master.dto.LoadRequest;
 import com.ociet.loadgenerator.master.dto.LoadResult;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -19,13 +22,19 @@ public class Controller {
         this.resultService = resultService;
     }
 
-    @PostMapping
+    @PostMapping(path="/load")
     public void requestLoad(@RequestBody LoadRequest loadRequest) {
         requestService.requestLoad(loadRequest);
     }
 
-    @GetMapping
+    @GetMapping(path="/load")
     public Collection<LoadResult> getResults() {
         return resultService.getResults();
+    }
+
+    @GetMapping(path="/slaves")
+    public int getSlaveCount() {
+        Application application = EurekaServerContextHolder.getInstance().getServerContext().getRegistry().getApplication("SLAVE2");
+        return application == null ? 0 : application.size();
     }
 }

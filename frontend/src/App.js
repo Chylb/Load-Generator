@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Container, Form, Button } from "react-bootstrap";
+import { Container, Form, Button, Col, Row } from "react-bootstrap";
 import { useSortableData } from './useSortableData';
 import { CONCURRENT_USERS_PER_INSTANCE, API_PATH } from './constants';
 import './App.css';
@@ -8,20 +8,28 @@ import 'bootstrap/dist/css/bootstrap.min.css';
 
 function App() {
   const [results, setResults] = useState([]);
+  const [slaves, setSlaves] = useState(0);
   const [sortedResults, requestSort, sortConfig] = useSortableData(results, { key: 'key', direction: 'descending' });
 
   useEffect(() => {
     const interval = setInterval(() => {
       fetchResults();
+      fetchSlaves();
     }, 1000);
 
     return () => clearInterval(interval);
   }, []);
 
   const fetchResults = async () => {
-    fetch(API_PATH)
+    fetch(API_PATH + "/load")
       .then(response => response.json())
       .then(results => setResults(results));
+  }
+
+  const fetchSlaves = async () => {
+    fetch(API_PATH + "/slaves")
+      .then(response => response.json())
+      .then(results => setSlaves(results));
   }
 
   const handleSubmit = async (event) => {
@@ -31,7 +39,7 @@ function App() {
       loopCount: event.target.loopCount.value
     }
 
-    fetch(API_PATH, {
+    fetch(API_PATH + "/load", {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -63,21 +71,31 @@ function App() {
       </Container>
 
       <Container>
-        <Form onSubmit={handleSubmit}>
-          <Form.Group controlId="concurrentUsers" className="mb-3">
-            <Form.Label>Concurrent users</Form.Label>
-            <Form.Control type="number" defaultValue={CONCURRENT_USERS_PER_INSTANCE} step={CONCURRENT_USERS_PER_INSTANCE} min={CONCURRENT_USERS_PER_INSTANCE} required={true} />
-          </Form.Group>
+        <Row>
+          <Col>
+            <Container>
+              <Form onSubmit={handleSubmit}>
+                <Form.Group controlId="concurrentUsers" className="mb-3">
+                  <Form.Label>Concurrent users</Form.Label>
+                  <Form.Control type="number" defaultValue={CONCURRENT_USERS_PER_INSTANCE} step={CONCURRENT_USERS_PER_INSTANCE} min={CONCURRENT_USERS_PER_INSTANCE} required={true} />
+                </Form.Group>
 
-          <Form.Group controlId="loopCount" className="mb-3">
-            <Form.Label>Loop count</Form.Label>
-            <Form.Control type="number" defaultValue="10" min={1} required={true} />
-          </Form.Group>
+                <Form.Group controlId="loopCount" className="mb-3">
+                  <Form.Label>Loop count</Form.Label>
+                  <Form.Control type="number" defaultValue="10" min={1} required={true} />
+                </Form.Group>
 
-          <Button variant="primary" type="submit">
-            Generate load
-          </Button>
-        </Form>
+                <Button variant="primary" type="submit">
+                  Generate load
+                </Button>
+              </Form>
+            </Container>
+          </Col>
+
+          <Col>
+            Concurrent users available: {CONCURRENT_USERS_PER_INSTANCE * slaves}
+          </Col>
+        </Row>
       </Container>
 
       <Container className="py-5">
