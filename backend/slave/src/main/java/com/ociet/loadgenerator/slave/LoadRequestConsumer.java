@@ -6,6 +6,7 @@ import com.ociet.loadgenerator.common.LoadRequestMessage;
 import com.ociet.loadgenerator.common.LoadResultMessage;
 import lombok.Getter;
 import lombok.Setter;
+import org.apache.http.annotation.Contract;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -21,8 +22,8 @@ import java.net.http.HttpResponse;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadPoolExecutor;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
 
 @Service
@@ -35,7 +36,8 @@ public class LoadRequestConsumer {
     @Autowired
     private LoadResultProducer producer;
 
-    private final Function<HttpRequestGeneratorArguments, HttpRequest> requestGenerator = (args) -> {
+    private final ThrowingFunction<HttpRequestGeneratorArguments, HttpRequest> requestGenerator = (args) -> {
+        //throw new Exception("exception exception serious very" + args.getUserOffset());
         return HttpRequest.newBuilder(
                         URI.create("http://localhost:1111/players/" + (args.getUserOffset() % 18278))
                 )
@@ -52,9 +54,13 @@ public class LoadRequestConsumer {
         long startTimestamp = System.currentTimeMillis();
         AtomicLong responseTimeSum = new AtomicLong();
         AtomicLong maxResponseTime = new AtomicLong();
-        AtomicBoolean failed = new AtomicBoolean(Math.abs(record.timestamp() - startTimestamp) > MAX_CONSUME_TIME_DELAY);
+        AtomicReference<String> error = new AtomicReference<>(null);
 
-        if (!failed.get()) {
+        if (Math.abs(record.timestamp() - startTimestamp) > MAX_CONSUME_TIME_DELAY) {
+            error.set("Exceeded max consume time delay");
+        }
+
+        if (error.get() == null) {
             for (int i = 0; i < Constants.CONCURRENT_USERS_PER_SLAVE; i++) {
                 var requestGeneratorArguments = new HttpRequestGeneratorArguments();
                 requestGeneratorArguments.setUserOffset(message.getRequestOffset() * Constants.CONCURRENT_USERS_PER_SLAVE + i);
@@ -81,7 +87,7 @@ public class LoadRequestConsumer {
                         }
                     } catch (Exception e) {
                         logger.error(e.getMessage());
-                        failed.set(true);
+                        error.set(e.getMessage());
                     }
                     responseTimeSum.addAndGet(userResponseTimeSum);
                     long finalUserMaxResponseTime = userMaxResponseTime;
@@ -98,7 +104,7 @@ public class LoadRequestConsumer {
                 responseTimeSum.get(),
                 maxResponseTime.get(),
                 startTimestamp,
-                failed.get()
+                error.get()
         );
         producer.send(resultMessage);
     }

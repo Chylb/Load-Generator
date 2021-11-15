@@ -6,6 +6,8 @@ import com.ociet.loadgenerator.master.dto.LoadRequest;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import java.util.LinkedList;
+
 @Service
 public class RequestService {
     private static final int PARTITION_COUNT = 100;
@@ -29,6 +31,7 @@ public class RequestService {
         ResultRow resultRow = new ResultRow();
         resultRow.setTotalParts(concurrentInstances);
         resultRow.setLoopCount(loadRequest.getLoopCount());
+        resultRow.setErrors(new LinkedList<>());
         resultService.addResultEntry(key, resultRow);
 
         for(int i = 0; i < concurrentInstances; i++) {

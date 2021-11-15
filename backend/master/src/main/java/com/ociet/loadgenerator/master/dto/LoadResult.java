@@ -4,6 +4,8 @@ import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.Setter;
 
+import java.util.List;
+
 @AllArgsConstructor
 @Setter
 @Getter
@@ -13,4 +15,5 @@ public class LoadResult {
     private final long averageResponseTime;
     private final long maxResponseTime;
     private final String state;
+    private final List<String> errors;
 }

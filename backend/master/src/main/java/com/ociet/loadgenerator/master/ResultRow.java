@@ -2,6 +2,8 @@ package com.ociet.loadgenerator.master;
 
 import lombok.*;
 
+import java.util.List;
+
 @Getter
 @Setter
 @ToString
@@ -13,5 +15,5 @@ public class ResultRow {
     public int receivedParts;
     public int totalParts;
     public int loopCount;
-    public boolean failed;
+    public List<String> errors;
 }

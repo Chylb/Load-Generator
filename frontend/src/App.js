@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Container, Form, Button, Col, Row } from "react-bootstrap";
+import { Container, Form, Button, Col, Row, Tooltip, OverlayTrigger } from "react-bootstrap";
 import { useSortableData } from './useSortableData';
 import { CONCURRENT_USERS_PER_INSTANCE, API_PATH } from './constants';
 import './App.css';
@@ -50,13 +50,28 @@ function App() {
 
   const renderResults = (results) => {
     return results.map((result) => {
+      const tooltip =
+        <Tooltip id={result.key}>
+          {[...new Set(result.errors)].map(err => (
+            <><div>{err}</div> <br /></>
+          ))}
+        </Tooltip>;
+
       return (
         <tr key={result.key} className={result.state == 'running' ? "table-warning" : ""}>
           <td>{new Date(1 * result.key).toLocaleString()}</td>
           <td>{result.concurrentUsers}</td>
           <td>{(result.averageResponseTime / 1000000).toFixed(2)}</td>
           <td>{(result.maxResponseTime / 1000000).toFixed(2)}</td>
-          <td>{result.state}</td>
+          <td>
+            {result.errors.length > 0 ?
+              <OverlayTrigger overlay={tooltip}>
+                <div>{result.state}</div>
+              </OverlayTrigger>
+              :
+              <div>{result.state}</div>
+            }
+          </td>
         </tr >
       )
     })
