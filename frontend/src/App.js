@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Container, Form, Button, Col, Row, Tooltip, OverlayTrigger } from "react-bootstrap";
 import { useSortableData } from './useSortableData';
-import { CONCURRENT_USERS_PER_INSTANCE, API_PATH } from './constants';
+import { CONCURRENT_USERS_PER_INSTANCE, MASTER_API_PATH, RESULT_API_PATH } from './constants';
 import './App.css';
 
 import 'bootstrap/dist/css/bootstrap.min.css';
@@ -21,13 +21,14 @@ function App() {
   }, []);
 
   const fetchResults = async () => {
-    fetch(API_PATH + "/load")
+    fetch(RESULT_API_PATH + "/last?count=20")
+    //fetch(RESULT_API_PATH + "/all")
       .then(response => response.json())
       .then(results => setResults(results));
   }
 
   const fetchSlaves = async () => {
-    fetch(API_PATH + "/slaves")
+    fetch(MASTER_API_PATH + "/slaves")
       .then(response => response.json())
       .then(results => setSlaves(results));
   }
@@ -39,7 +40,7 @@ function App() {
       loopCount: event.target.loopCount.value
     }
 
-    fetch(API_PATH + "/load", {
+    fetch(MASTER_API_PATH + "/load", {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -51,11 +52,13 @@ function App() {
   const renderResults = (results) => {
     return results.map((result) => {
       const tooltip =
+        result.errors !== undefined ? 
         <Tooltip id={result.key}>
-          {[...new Set(result.errors)].map(err => (
+          {result.errors.map(err => (
             <><div>{err}</div> <br /></>
           ))}
-        </Tooltip>;
+        </Tooltip> :
+        null;
 
       return (
         <tr key={result.key} className={result.state == 'running' ? "table-warning" : ""}>
@@ -64,7 +67,7 @@ function App() {
           <td>{(result.averageResponseTime / 1000000).toFixed(2)}</td>
           <td>{(result.maxResponseTime / 1000000).toFixed(2)}</td>
           <td>
-            {result.errors.length > 0 ?
+            {result.errors !== undefined ?
               <OverlayTrigger overlay={tooltip}>
                 <div>{result.state}</div>
               </OverlayTrigger>
@@ -119,8 +122,8 @@ function App() {
             <tr>
               <th scope="col" onClick={() => requestSort('key')}>Date</th>
               <th scope="col" onClick={() => requestSort('concurrentUsers')}>Concurrent users</th>
-              <th scope="col" onClick={() => requestSort('averageResponseTime')}>Average response time</th>
-              <th scope="col" onClick={() => requestSort('maxResponseTime')}>Max response time</th>
+              <th scope="col" onClick={() => requestSort('averageResponseTime')}>Average response time (ms)</th>
+              <th scope="col" onClick={() => requestSort('maxResponseTime')}>Max response time (ms)</th>
               <th scope="col" onClick={() => requestSort('state')}>State</th>
             </tr>
           </thead>

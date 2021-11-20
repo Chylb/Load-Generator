@@ -7,7 +7,7 @@ import lombok.*;
 @Getter
 @AllArgsConstructor
 @NoArgsConstructor
-public class LoadRequestMessage {
-    int totalParts;
-    int loopCount;
+public class LoadSubrequestMessage {
+    private int requestOffset;
+    private int loopCount;
 }

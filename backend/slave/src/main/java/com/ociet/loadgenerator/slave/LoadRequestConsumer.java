@@ -2,11 +2,10 @@ package com.ociet.loadgenerator.slave;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.ociet.loadgenerator.common.Constants;
-import com.ociet.loadgenerator.common.LoadRequestMessage;
+import com.ociet.loadgenerator.common.LoadSubrequestMessage;
 import com.ociet.loadgenerator.common.LoadResultMessage;
 import lombok.Getter;
 import lombok.Setter;
-import org.apache.http.annotation.Contract;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -15,6 +14,7 @@ import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
+import java.net.ConnectException;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
@@ -24,7 +24,6 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
-import java.util.function.Function;
 
 @Service
 public class LoadRequestConsumer {
@@ -44,10 +43,10 @@ public class LoadRequestConsumer {
                 .build();
     };
 
-    @KafkaListener(topics = Constants.LOAD_REQUEST_TOPIC, groupId = "group_id")
+    @KafkaListener(topics = Constants.LOAD_SUBREQUEST_TOPIC, groupId = "group_id")
     public void consume(ConsumerRecord<String, String> record) throws IOException, InterruptedException {
         logger.info(String.format("Consumed message -> %s", record.key()));
-        LoadRequestMessage message = objectMapper.readValue(record.value(), LoadRequestMessage.class);
+        LoadSubrequestMessage message = objectMapper.readValue(record.value(), LoadSubrequestMessage.class);
 
         CountDownLatch latch = new CountDownLatch(Constants.CONCURRENT_USERS_PER_SLAVE);
 
@@ -86,8 +85,13 @@ public class LoadRequestConsumer {
                             requestGeneratorArguments.setPreviousResponse(response);
                         }
                     } catch (Exception e) {
-                        logger.error(e.getMessage());
-                        error.set(e.getMessage());
+                        String exceptionMessage = e.getMessage();
+                        if(exceptionMessage == null) {
+                            exceptionMessage = e.getClass().getName();
+                        }
+
+                        logger.error(exceptionMessage);
+                        error.set(exceptionMessage);
                     }
                     responseTimeSum.addAndGet(userResponseTimeSum);
                     long finalUserMaxResponseTime = userMaxResponseTime;
