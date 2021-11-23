@@ -1,5 +1,6 @@
-include 'master'
+rootProject.name = 'load-generator'
+include 'result-service'
 include 'common'
 include 'slave'
-include 'result-service'
+include 'master'
 

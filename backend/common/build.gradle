@@ -1,13 +1,14 @@
-version 'unspecified'
-
-dependencies {
-    //implementation 'org.projectlombok:lombok:1.18.20'
-//    compileOnly 'org.projectlombok:lombok'
-//    annotationProcessor 'org.projectlombok:lombok'
-    compileOnly 'org.projectlombok:lombok:1.18.20'
-    annotationProcessor 'org.projectlombok:lombok:1.18.20'
-}
-
-test {
-    useJUnitPlatform()
-}
+//plugins {
+//    id 'org.jetbrains.kotlin.jvm' version '1.6.0'
+//}
+//
+//group 'org.example'
+//version '1.0-SNAPSHOT'
+//
+//repositories {
+//    mavenCentral()
+//}
+//
+//dependencies {
+//    implementation "org.jetbrains.kotlin:kotlin-stdlib"
+//}
