@@ -83,8 +83,10 @@ class LoadRequestConsumer {
                             requestGeneratorArguments.previousResponse = response
                         }
                     } catch (e: Exception) {
-                        val exceptionMessage = getExceptionMessage(e)
-                        error.set(exceptionMessage)
+                        if (error.get() == null) {
+                            val exceptionMessage = getExceptionMessage(e)
+                            error.set(exceptionMessage)
+                        }
                     }
                     responseTimeSum.addAndGet(userResponseTimeSum)
                     val finalUserMaxResponseTime = userMaxResponseTime
@@ -103,7 +105,6 @@ class LoadRequestConsumer {
                     futures.get().first.get()
                     futures.get().remove()
                 } catch (e: Exception) {
-                    error.set(getExceptionMessage(e))
                 }
             }
 
