@@ -29,6 +29,10 @@ class RequestService @Autowired internal constructor(producer: Producer) {
         }
     }
 
+    fun cancelLoad() {
+        producer.sendCancel()
+    }
+
     init {
         this.producer = producer
     }

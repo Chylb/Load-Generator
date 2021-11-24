@@ -18,6 +18,11 @@ class Controller @Autowired internal constructor(requestService: RequestService)
         }
     }
 
+    @PostMapping(path = ["/cancelload"])
+    fun cancelLoad() {
+        requestService.cancelLoad()
+    }
+
     @GetMapping(path = ["/slaves"])
     fun slaveCount(): Int {
         val application: Application? =

@@ -21,6 +21,10 @@ class Producer {
 
     @Autowired
     private val kafkaRequestTemplate: KafkaTemplate<String, LoadRequestMessage?>? = null
+
+    @Autowired
+    private val kafkaCancelTemplate: KafkaTemplate<String, String>? = null
+
     fun sendSubrequest(key: String, partition: Int, message: LoadSubrequestMessage?) {
         logger.info(String.format("Producing message -> %s", message))
         kafkaSubrequestTemplate!!.send(Constants.LOAD_SUBREQUEST_TOPIC, partition, key, message)
@@ -29,5 +33,10 @@ class Producer {
     fun sendRequest(key: String, message: LoadRequestMessage?) {
         logger.info(String.format("Producing message -> %s", message))
         kafkaRequestTemplate!!.send(Constants.LOAD_REQUEST_TOPIC, key, message)
+    }
+
+    fun sendCancel() {
+        logger.info(String.format("Producing cancel message "))
+        kafkaCancelTemplate!!.send(Constants.LOAD_CANCEL_TOPIC, "")
     }
 }

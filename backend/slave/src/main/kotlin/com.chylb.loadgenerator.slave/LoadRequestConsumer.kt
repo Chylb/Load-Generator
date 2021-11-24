@@ -15,8 +15,9 @@ import java.net.URI
 import java.net.http.HttpClient
 import java.net.http.HttpRequest
 import java.net.http.HttpResponse
-import java.util.concurrent.CountDownLatch
+import java.util.*
 import java.util.concurrent.Executors
+import java.util.concurrent.Future
 import java.util.concurrent.ThreadPoolExecutor
 import java.util.concurrent.atomic.AtomicLong
 import java.util.concurrent.atomic.AtomicReference
@@ -28,9 +29,11 @@ class LoadRequestConsumer {
         private const val MAX_CONSUME_TIME_DELAY: Long = 1000
         private val logger: Logger = LoggerFactory.getLogger(LoadRequestConsumer::class.java)
     }
+
     private val objectMapper: ObjectMapper = ObjectMapper()
     private val executor: ThreadPoolExecutor =
         Executors.newFixedThreadPool(Constants.CONCURRENT_USERS_PER_SLAVE) as ThreadPoolExecutor
+    private val futures = AtomicReference(LinkedList<Future<*>>())
 
     @Autowired
     private val producer: LoadResultProducer? = null
@@ -47,10 +50,10 @@ class LoadRequestConsumer {
         IOException::class,
         InterruptedException::class
     )
+    @Synchronized
     fun consume(record: ConsumerRecord<String?, String?>) {
         logger.info(java.lang.String.format("Consumed message -> %s", record.key()))
         val message: LoadSubrequestMessage = objectMapper.readValue(record.value(), LoadSubrequestMessage::class.java)
-        val latch = CountDownLatch(Constants.CONCURRENT_USERS_PER_SLAVE)
         val startTimestamp = System.currentTimeMillis()
         val responseTimeSum = AtomicLong()
         val maxResponseTime = AtomicLong()
@@ -58,11 +61,13 @@ class LoadRequestConsumer {
         if (Math.abs(record.timestamp() - startTimestamp) > MAX_CONSUME_TIME_DELAY) {
             error.set("Exceeded max consume time delay")
         }
+
         if (error.get() == null) {
             for (i in 0 until Constants.CONCURRENT_USERS_PER_SLAVE) {
                 val requestGeneratorArguments = HttpRequestGeneratorArguments()
                 requestGeneratorArguments.userOffset = message.requestOffset * Constants.CONCURRENT_USERS_PER_SLAVE + i
-                executor.execute {
+
+                val future = executor.submit {
                     val client: HttpClient = HttpClient.newHttpClient()
                     var userResponseTimeSum: Long = 0
                     var userMaxResponseTime: Long = 0
@@ -78,11 +83,7 @@ class LoadRequestConsumer {
                             requestGeneratorArguments.previousResponse = response
                         }
                     } catch (e: Exception) {
-                        var exceptionMessage = e.message
-                        if (exceptionMessage == null) {
-                            exceptionMessage = e.javaClass.name
-                        }
-                        logger.error(exceptionMessage)
+                        val exceptionMessage = getExceptionMessage(e)
                         error.set(exceptionMessage)
                     }
                     responseTimeSum.addAndGet(userResponseTimeSum)
@@ -93,11 +94,32 @@ class LoadRequestConsumer {
                             finalUserMaxResponseTime
                         )
                     }
-                    latch.countDown()
+                }
+                futures.get().add(future)
+            }
+
+            while (!futures.get().isEmpty() && error.get() == null) {
+                try {
+                    futures.get().first.get()
+                    futures.get().remove()
+                } catch (e: Exception) {
+                    error.set(getExceptionMessage(e))
                 }
             }
-            latch.await()
+
+            synchronized(futures) {
+                cancelFutures()
+                while (!futures.get().isEmpty()) {
+                    try {
+                        futures.get().first.get()
+                    } catch (e: Exception) {
+                    } finally {
+                        futures.get().remove()
+                    }
+                }
+            }
         }
+
         val resultMessage = LoadResultMessage(
             record.key(),
             responseTimeSum.get(),
@@ -106,6 +128,28 @@ class LoadRequestConsumer {
             error.get()
         )
         producer!!.send(resultMessage)
+    }
+
+    @KafkaListener(topics = [Constants.LOAD_CANCEL_TOPIC], groupId = "#{T(java.util.UUID).randomUUID().toString()}")
+    fun cancelLoad(record: ConsumerRecord<String?, String?>) {
+        logger.info(java.lang.String.format("Canceling load generation"))
+        cancelFutures()
+    }
+
+    private fun cancelFutures() {
+        try {
+            for (future in futures.get()) {
+                future.cancel(true)
+            }
+        } catch (e: Exception) {
+        }
+    }
+
+    private fun getExceptionMessage(e: Exception): String? {
+        var message = if (e.message != null) e.message else e.javaClass.name
+        if (message == "java.lang.InterruptedException")
+            message = "Load generation canceled"
+        return message
     }
 
     class HttpRequestGeneratorArguments(

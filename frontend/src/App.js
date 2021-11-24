@@ -22,7 +22,7 @@ function App() {
 
   const fetchResults = async () => {
     fetch(RESULT_API_PATH + "/last?count=20")
-    //fetch(RESULT_API_PATH + "/all")
+      //fetch(RESULT_API_PATH + "/all")
       .then(response => response.json())
       .then(results => setResults(results));
   }
@@ -49,16 +49,22 @@ function App() {
     })
   }
 
+  const cancelLoad = () => {
+    fetch(MASTER_API_PATH + "/cancelload", {
+      method: 'POST',
+    })
+  }
+
   const renderResults = (results) => {
     return results.map((result) => {
       const tooltip =
-        result.errors !== undefined ? 
-        <Tooltip id={result.key}>
-          {result.errors.map(err => (
-            <><div>{err}</div> <br /></>
-          ))}
-        </Tooltip> :
-        null;
+        result.errors !== undefined ?
+          <Tooltip id={result.key}>
+            {result.errors.map(err => (
+              <><div>{err}</div> <br /></>
+            ))}
+          </Tooltip> :
+          null;
 
       return (
         <tr key={result.key} className={result.state == 'running' ? "table-warning" : ""}>
@@ -111,7 +117,15 @@ function App() {
           </Col>
 
           <Col>
-            Concurrent users available: {CONCURRENT_USERS_PER_INSTANCE * slaves}
+            <Row className="py-4">
+              Concurrent users available: {CONCURRENT_USERS_PER_INSTANCE * slaves}
+            </Row>
+
+            <Row>
+              <Button variant="danger" type="submit" className="w-50" onClick={() => cancelLoad()}>
+                Cancel load generation
+              </Button>
+            </Row>
           </Col>
         </Row>
       </Container>
